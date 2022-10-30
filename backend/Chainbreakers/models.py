@@ -38,6 +38,18 @@ class Transaction(models.Model):
         Profile, on_delete=models.CASCADE, related_name='seller', null=True, blank=True)
     price = models.FloatField(default=0)
     quant = models.IntegerField(default=0)
+    buyorder = models.IntegerField(default=0)
+    sellorder = models.IntegerField(default=0)
 
     def __str__(self):
         return str(self.buyer)+" "+str(self.seller)
+
+
+class Price(models.Model):
+    curr_price = models.FloatField()
+    prev_price = models.FloatField()
+    step = models.AutoField(primary_key=True)
+    time = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return str(self.curr_price)

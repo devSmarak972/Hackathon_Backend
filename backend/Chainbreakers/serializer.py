@@ -1,6 +1,6 @@
 # todo/todo_api/serializers.py
 from rest_framework import serializers
-from .models import Order, Profile, Transaction
+from .models import Order, Price, Profile, Transaction
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -18,4 +18,11 @@ class OrderSerializer(serializers.ModelSerializer):
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
-        fields = ["trans_id", "buyer", "seller", "price", "quant"]
+        fields = ["trans_id", "buyer", "seller",
+                  "price", "quant", "buyorder", "sellorder"]
+
+
+class PriceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Price
+        fields = ["curr_price", "prev_price"]

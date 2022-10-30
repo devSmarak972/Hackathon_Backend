@@ -5,9 +5,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import permissions
 from .models import Profile
-from .models import Order
+from .models import Order, Price
 from .models import Transaction
-from .serializer import ProfileSerializer
+from .serializer import ProfileSerializer, PriceSerializer
 from .serializer import OrderSerializer
 from .serializer import TransactionSerializer
 from django.contrib.auth.models import User, auth
@@ -124,15 +124,17 @@ class TransactionView(APIView):
         #     'price': request.data.get('price'),
         #     'quant': request.data.get('quant'),
         # }
-        serializer = TransactionSerializer(data=trans)
+        serializer = TransactionSerializer(data=trans, many=True)
         if serializer.is_valid():
             serializer.save()
+            i = 0
             for record in trans:
-                buyer = Profile.objects.get(user_id=int(record.buyer))
+
+                buyer = Profile.objects.get(user_id=int(record.get('buyer')))
                 seller = Profile.objects.get(
-                    user_id=int(record.seller))
+                    user_id=int(record.get('seller')))
                 trans = Transaction.objects.get(
-                    trans_id=serializer.data.get("trans_id"))
+                    trans_id=serializer.data[i].get("trans_id"))
                 trans.buyer_id = buyer.user_id
                 trans.seller_id = seller.user_id
                 trans.save()
@@ -140,18 +142,70 @@ class TransactionView(APIView):
                 buyer.fiat -= trans.quant*trans.price
                 seller.quant -= trans.quant
                 seller.fiat += trans.quant*trans.price
+                i += 1
 
-                # order = Order.objects.get(
-                #     order_id=int())
-                # order.quantity -= trans.quant
-                # if (order.quantity <= 0):
-                #     order.delete()
-                # else:
-                #     order.save()
+                order = Order.objects.get(
+                    order_id=int(trans.buyorder))
+                order.quantity += trans.quant
+                if (order.quantity <= 0):
+                    order.delete()
+                else:
+                    order.save()
+
+                sorder = Order.objects.get(
+                    order_id=int(trans.sellorder))
+                sorder.quantity -= trans.quant
+                if (sorder.quantity <= 0):
+                    sorder.delete()
+                else:
+                    sorder.save()
+
                 seller.save()
                 buyer.save()
             # populate buye and seller ields in object
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PriceView(APIView):
+    # add permission to check if user is authenticated
+    # 1. List all
+    def get(self, request, *args, **kwargs):
+        '''
+        List all the todo items for given requested user
+        '''
+        step = request.query_params.get("step")
+        if (step is not None):
+            price = Price.objects.get(step=step)
+            serializer = PriceSerializer(price)
+        else:
+            user = Price.objects.all()
+            serializer = PriceSerializer(user, many=True)
+        # user = Profile.objects.get(user_id=int(request.data.get('id')))
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # 2. Create
+    def post(self, request, *args, **kwargs):
+        '''
+        Create the Todo with given todo data
+        '''
+        # prev_price = Price.objects.latest('curr_price')
+        # try:
+        #     step = Price.objects.latest('step')
+        # except Price.DoesNotExist:
+        #     step = 0
+
+        prices = request.data.get('prices')
+        print(prices, type(prices))
+        serializer = PriceSerializer(data=prices, many=True)
+        print(serializer, "serializer")
+        if serializer.is_valid():
+            serializer.save()
+            res = serializer
+
+            return Response(res.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
