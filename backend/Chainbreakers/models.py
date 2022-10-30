@@ -40,4 +40,4 @@ class Transaction(models.Model):
     quant = models.IntegerField(default=0)
 
     def __str__(self):
-        return self.buyer + '-' + self.seller
+        return str(self.buyer)+" "+str(self.seller)

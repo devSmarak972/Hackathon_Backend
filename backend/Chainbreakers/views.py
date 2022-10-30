@@ -78,6 +78,8 @@ class OrderView(APIView):
             'price': request.data.get('price'),
             'market': request.data.get('market'),
         }
+        # price = int(price)
+
         serializer = OrderSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
@@ -114,34 +116,40 @@ class TransactionView(APIView):
         '''
         Create the Todo with given todo data
         '''
-        data = {
-            # 'buyer': request.data.get('buyer'),
-            # 'seller': request.data.get('seller'),
-            'price': request.data.get('price'),
-            'quant': request.data.get('quant'),
-        }
-        serializer = TransactionSerializer(data=data)
+        trans = request.data.get('trans')
+        print(trans, type(trans))
+        # data = {
+        #     # 'buyer': request.data.get('buyer'),
+        #     # 'seller': request.data.get('seller'),
+        #     'price': request.data.get('price'),
+        #     'quant': request.data.get('quant'),
+        # }
+        serializer = TransactionSerializer(data=trans)
         if serializer.is_valid():
             serializer.save()
-            buyer = Profile.objects.get(user_id=int(request.data.get('buyer')))
-            seller = Profile.objects.get(
-                user_id=int(request.data.get('seller')))
-            trans = Transaction.objects.get(
-                trans_id=serializer.data.get("trans_id"))
-            trans.buyer_id = buyer.user_id
-            trans.seller_id = seller.user_id
-            trans.save()
-            buyer.quant += trans.quant
-            buyer.fiat -= trans.quant*trans.price
-            seller.quant -= trans.quant
-            seller.fiat += trans.quant*trans.price
+            for record in trans:
+                buyer = Profile.objects.get(user_id=int(record.buyer))
+                seller = Profile.objects.get(
+                    user_id=int(record.seller))
+                trans = Transaction.objects.get(
+                    trans_id=serializer.data.get("trans_id"))
+                trans.buyer_id = buyer.user_id
+                trans.seller_id = seller.user_id
+                trans.save()
+                buyer.quant += trans.quant
+                buyer.fiat -= trans.quant*trans.price
+                seller.quant -= trans.quant
+                seller.fiat += trans.quant*trans.price
 
-            order = Order.objects.get(
-                order_id=int(request.data.get('order_id')))
-            order.quantity -= trans.quant
-            order.save()
-            seller.save()
-            buyer.save()
+                # order = Order.objects.get(
+                #     order_id=int())
+                # order.quantity -= trans.quant
+                # if (order.quantity <= 0):
+                #     order.delete()
+                # else:
+                #     order.save()
+                seller.save()
+                buyer.save()
             # populate buye and seller ields in object
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
